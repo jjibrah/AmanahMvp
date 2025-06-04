@@ -4,6 +4,7 @@ class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   static const Color emerald = Color(0xFF2CA58D);
+  static const Color backgroundWhite = Color(0xFFF7F8FA);
   static const Color emeraldLight = Color(0xFFB2DFDB);
   static const Color cardBg = Colors.white;
   static const Color textPrimary = Color(0xFF222B45);
@@ -13,15 +14,15 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: backgroundWhite,
       appBar: AppBar(
-        backgroundColor: emerald,
+        backgroundColor: backgroundWhite, // change
         elevation: 0,
         centerTitle: true,
         title: const Text(
           'Profile',
           style: TextStyle(
-            color: Colors.white,
+            color: emerald,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -33,54 +34,81 @@ class ProfilePage extends StatelessWidget {
         children: [
           // Profile section
           Container(
-            color: emerald,
-            child: Column(
-              children: [
-                const SizedBox(height: 24),
-                CircleAvatar(
-                  radius: 48,
-                  backgroundColor: Colors.white,
-                  backgroundImage: const AssetImage('assets/icons/icon.jpg'),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'JOHN DOE',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'john.doe@example.com',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: emerald,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+            color: backgroundWhite,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 10),
-                  ),
-                  child: const Text(
-                    'Edit Profile',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-              ],
+                child: Column(
+                  children: [
+                    Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: emerald,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                      ),
+                    ),
+                    Transform.translate(
+                      offset: const Offset(0, -50),
+                      child: CircleAvatar(
+                        radius: 48,
+                        backgroundColor: Colors.white,
+                        backgroundImage: const AssetImage('assets/icons/icon.jpg'),
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    const Text(
+                      'JOHN DOE',
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'john.doe@example.com',
+                      style: TextStyle(
+                        color: textSecondary,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: emerald,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 10),
+                      ),
+                      child: const Text(
+                        'Edit Profile',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
             ),
           ),
-
           // Stats card
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
