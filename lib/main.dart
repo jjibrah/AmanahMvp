@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'profile.dart';
+import 'splash.dart';
+import 'signup.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,7 +18,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
       ),
-      home: const ProfilePage(),
+      home: const SplashPage(),
     );
   }
 }
