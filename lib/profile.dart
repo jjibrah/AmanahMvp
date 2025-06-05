@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  static const Color emerald = Color(0xFF2CA58D);
+  static const Color emerald = Color.fromARGB(255, 51, 187, 120);
   static const Color backgroundWhite = Color(0xFFF7F8FA);
   static const Color emeraldLight = Color(0xFFB2DFDB);
   static const Color cardBg = Colors.white;
@@ -22,7 +22,7 @@ class ProfilePage extends StatelessWidget {
         title: const Text(
           'Profile',
           style: TextStyle(
-            color: emerald,
+            color: textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),

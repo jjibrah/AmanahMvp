@@ -30,7 +30,7 @@ class _SplashPageState extends State<SplashPage> {
           style: TextStyle(
             fontSize: 48,
             fontWeight: FontWeight.bold,
-            color: Colors.green[700],
+            color: const Color.fromARGB(255, 51, 187, 120),
             letterSpacing: 2,
           ),
         ),
