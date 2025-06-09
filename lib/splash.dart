@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'signup.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({Key? key}) : super(key: key);
@@ -14,9 +13,7 @@ class _SplashPageState extends State<SplashPage> {
   void initState() {
     super.initState();
     Timer(const Duration(seconds: 2), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const SignupPage()),
-      );
+      Navigator.of(context).pushReplacementNamed('/signup');
     });
   }
 
@@ -30,7 +27,7 @@ class _SplashPageState extends State<SplashPage> {
           style: TextStyle(
             fontSize: 48,
             fontWeight: FontWeight.bold,
-            color: const Color.fromARGB(255, 51, 187, 120),
+            color: const Color(0xFF00BFA5),
             letterSpacing: 2,
           ),
         ),

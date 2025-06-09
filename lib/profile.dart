@@ -189,18 +189,6 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
-      // Bottom navigation bar placeholder (implement in main app if needed)
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2,
-        selectedItemColor: emerald,
-        unselectedItemColor: textSecondary,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.inventory_2_outlined), label: 'Shipments'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-        onTap: (i) {},
-      ),
     );
   }
 

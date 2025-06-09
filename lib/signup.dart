@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'profile.dart';
+import 'pages/otp_verification_page.dart';
 
 const supabaseUrl = 'https://xychvsmzcbmsqkkitnuf.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5Y2h2c216Y2Jtc3Fra2l0bnVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0Nzk5MDEsImV4cCI6MjA2NDA1NTkwMX0.MfZLMKeBCj4_26FifX-igydQGO7BeAf1vH8emmZzK_Q';
@@ -24,30 +25,49 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Future<void> _savePhoneNumber() async {
-    final phone = _phoneController.text.trim();
-    if (phone.isEmpty) {
+    if (_phoneController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your phone number.')),
+        const SnackBar(
+          content: Text('Please enter a phone number'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
+
     setState(() => _isLoading = true);
+    
     try {
-      final response = await Supabase.instance.client
-          .from('user')
-          .insert({'phone_number': phone});
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Phone number saved successfully!')),
-      );
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const ProfilePage()),
-      );
+      // Format the phone number with country code
+      final phoneNumber = '+254${_phoneController.text}';
+      
+      // Here you would typically call your Supabase function to send OTP
+      // await supabase.function('send-otp').execute(...)
+      
+      // For now, just navigate to OTP page
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OtpVerificationPage(
+              phoneNumber: phoneNumber,
+            ),
+          ),
+        );
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

@@ -16,8 +16,8 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Vonage configuration
-const VONAGE_API_KEY = Deno.env.get('VONAGE_API_KEY')
-const VONAGE_API_SECRET = Deno.env.get('VONAGE_API_SECRET')
+const VONAGE_API_KEY = Deno.env.get('f7c0a191')
+const VONAGE_API_SECRET = Deno.env.get('bhXP20gznIEvJjSA')
 
 serve(async (req) => {
   try {
