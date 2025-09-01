@@ -16,18 +16,21 @@ class OrderPreviewPage extends StatefulWidget {
 }
 
 class RouteService {
-  static const String _osrmBaseUrl = 'https://router.project-osrm.org/route/v1/driving';
+  static const String _osrmBaseUrl =
+      'https://router.project-osrm.org/route/v1/driving';
 
   static Future<List<LatLng>> getRoutePoints(LatLng start, LatLng end) async {
     try {
-      final String url = '$_osrmBaseUrl/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson';
-      
+      final String url =
+          '$_osrmBaseUrl/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson';
+
       final response = await http.get(Uri.parse(url));
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        final List<dynamic> geometry = data['routes'][0]['geometry']['coordinates'];
-        
+        final List<dynamic> geometry =
+            data['routes'][0]['geometry']['coordinates'];
+
         // Convert GeoJSON coordinates [lng, lat] to LatLng objects [lat, lng]
         return geometry.map((coord) => LatLng(coord[1], coord[0])).toList();
       } else {
@@ -56,9 +59,15 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
   }
 
   Future<void> _loadRoute() async {
-    final LatLng? pickup = _tryLatLng(widget.order['pickupLat'], widget.order['pickupLng']);
-    final LatLng? dropoff = _tryLatLng(widget.order['dropoffLat'], widget.order['dropoffLng']);
-    
+    final LatLng? pickup = _tryLatLng(
+      widget.order['pickupLat'],
+      widget.order['pickupLng'],
+    );
+    final LatLng? dropoff = _tryLatLng(
+      widget.order['dropoffLat'],
+      widget.order['dropoffLng'],
+    );
+
     if (pickup != null && dropoff != null) {
       setState(() => isLoadingRoute = true);
       try {
@@ -77,20 +86,24 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     final double latDiff = (bounds.north - bounds.south).abs();
     final double lngDiff = (bounds.east - bounds.west).abs();
     final double maxDiff = max(latDiff, lngDiff);
-    
+
     if (maxDiff < 0.005) return 16; // Very close points
-    if (maxDiff < 0.01) return 15;  // Close points
-    if (maxDiff < 0.03) return 14;  // Medium-close
-    if (maxDiff < 0.06) return 13;  // Medium distance
-    if (maxDiff < 0.1) return 12;   // Medium-long
-    if (maxDiff < 0.3) return 11;   // Long distance
+    if (maxDiff < 0.01) return 15; // Close points
+    if (maxDiff < 0.03) return 14; // Medium-close
+    if (maxDiff < 0.06) return 13; // Medium distance
+    if (maxDiff < 0.1) return 12; // Medium-long
+    if (maxDiff < 0.3) return 11; // Long distance
     return 10; // Very long distance
   }
 
   double _calculateRouteDistance(List<LatLng> points) {
     double distance = 0;
     for (int i = 1; i < points.length; i++) {
-      distance += const Distance().as(LengthUnit.Meter, points[i-1], points[i]);
+      distance += const Distance().as(
+        LengthUnit.Meter,
+        points[i - 1],
+        points[i],
+      );
     }
     return distance;
   }
@@ -99,8 +112,8 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     if (routePoints.length <= 2 || isLoadingRoute) return const SizedBox();
 
     final double distance = _calculateRouteDistance(routePoints);
-    final String distanceText = distance > 1000 
-        ? '${(distance / 1000).toStringAsFixed(1)} km' 
+    final String distanceText = distance > 1000
+        ? '${(distance / 1000).toStringAsFixed(1)} km'
         : '${distance.toStringAsFixed(0)} m';
 
     return Positioned(
@@ -124,10 +137,17 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
           children: [
             const Icon(Icons.route, color: emerald, size: 20),
             const SizedBox(width: 8),
-            Text('Route: $distanceText', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Text(
+              'Route: $distanceText',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             const Spacer(),
             if (isLoadingRoute)
-              const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
           ],
         ),
       ),
@@ -135,33 +155,24 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
   }
 
   final Map<String, Map<String, dynamic>> statusConfig = {
-    'New': {
-      'button': 'Mark as Picked Up',
-      'next': 'Picked Up',
+    'Assigned': {
+      'button': 'Mark as Pickup in Progress',
+      'next': 'Pickup in Progress',
     },
-    'Picked Up': {
-      'button': 'Mark as On The Way',
-      'next': 'On The Way',
-    },
-    'On The Way': {
-      'button': 'Mark as Delivered',
-      'next': 'Delivered',
-    },
-    'Delivered': {
-      'button': 'Delivered',
-      'next': '',
-    },
-    'Accepted': {
-      'button': 'Mark as Picked Up',
-      'next': 'Picked Up',
-    },
+    'Pickup in Progress': {'button': 'Mark as Picked Up', 'next': 'Picked Up'},
+    'Picked Up': {'button': 'Mark as On The Way', 'next': 'On The Way'},
+    'On The Way': {'button': 'Mark as Delivered', 'next': 'Delivered'},
+    'Delivered': {'button': 'Delivered', 'next': ''},
   };
 
   @override
   Widget build(BuildContext context) {
     final Map<String, String> order = Map<String, String>.from(widget.order);
     final LatLng? pickup = _tryLatLng(order['pickupLat'], order['pickupLng']);
-    final LatLng? dropoff = _tryLatLng(order['dropoffLat'], order['dropoffLng']);
+    final LatLng? dropoff = _tryLatLng(
+      order['dropoffLat'],
+      order['dropoffLng'],
+    );
 
     final List<LatLng> points = [
       if (pickup != null) pickup,
@@ -176,9 +187,11 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     final LatLng center = bounds?.center ?? const LatLng(-1.2921, 36.8219);
     final double zoom = bounds != null ? _calculateOptimalZoom(bounds) : 13;
 
-    final String status = order['status'] ?? 'New';
-    final String buttonLabel = (statusConfig[status] ?? statusConfig['New']!)['button'] as String;
-    final String nextStatus = (statusConfig[status] ?? statusConfig['New']!)['next'] as String;
+    final String status = order['status'] ?? 'Assigned';
+    final String buttonLabel =
+        (statusConfig[status] ?? statusConfig['Assigned']!)['button'] as String;
+    final String nextStatus =
+        (statusConfig[status] ?? statusConfig['Assigned']!)['next'] as String;
 
     return Scaffold(
       backgroundColor: backgroundWhite,
@@ -186,7 +199,10 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
         backgroundColor: backgroundWhite,
         elevation: 0,
         centerTitle: true,
-        title: const Text('Delivery Details', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Delivery Details',
+          style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700),
+        ),
       ),
       body: Stack(
         children: [
@@ -201,11 +217,12 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                urlTemplate:
+                    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
                 subdomains: const ['a', 'b', 'c'],
                 userAgentPackageName: 'com.amanahmvp.app',
               ),
-              
+
               // Show loading indicator while route is being calculated
               if (isLoadingRoute)
                 MarkerLayer(
@@ -216,33 +233,38 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                       height: 60,
                       child: const Center(
                         child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.blue,
+                          ),
                           strokeWidth: 3,
                         ),
                       ),
                     ),
                   ],
                 ),
-              
+
               // Show actual route when available
               if (routePoints.length > 1 && !isLoadingRoute)
                 PolylineLayer(
                   polylines: [
                     Polyline(
-                      points: routePoints, 
+                      points: routePoints,
                       color: emerald,
                       strokeWidth: 6,
                       gradientColors: [emerald, emerald.withOpacity(0.7)],
                     ),
                   ],
                 ),
-              
+
               // Fallback to straight line if routing failed
-              if (routePoints.isEmpty && pickup != null && dropoff != null && !isLoadingRoute)
+              if (routePoints.isEmpty &&
+                  pickup != null &&
+                  dropoff != null &&
+                  !isLoadingRoute)
                 PolylineLayer(
                   polylines: [
                     Polyline(
-                      points: [pickup, dropoff], 
+                      points: [pickup, dropoff],
                       color: Colors.grey,
                       strokeWidth: 4,
                       strokeCap: StrokeCap.round,
@@ -250,55 +272,63 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                     ),
                   ],
                 ),
-              
+
               if (pickup != null)
                 MarkerLayer(
                   markers: [
                     Marker(
-                      point: pickup, 
-                      width: 40, 
-                      height: 40, 
+                      point: pickup,
+                      width: 40,
+                      height: 40,
                       child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(Icons.local_shipping, color: Colors.orange, size: 24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      )
-                    ]
-                  ),
-              if (dropoff != null)
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: dropoff,
-                    width: 40,
-                    height: 40,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        child: const Icon(
+                          Icons.local_shipping,
+                          color: Colors.orange,
+                          size: 24,
+                        ),
                       ),
-                      child: const Icon(Icons.home, color: Colors.green, size: 24),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              if (dropoff != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: dropoff,
+                      width: 40,
+                      height: 40,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.home,
+                          color: Colors.green,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
 
@@ -319,7 +349,14 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 10),
-                    Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     Expanded(
                       child: ListView(
@@ -332,19 +369,43 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(order['merchant'] ?? '-', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary)),
+                                Text(
+                                  order['merchant'] ?? '-',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: textPrimary,
+                                  ),
+                                ),
                                 const SizedBox(height: 12),
                                 Row(
                                   children: [
-                                    const Icon(Icons.place_outlined, color: Colors.green),
+                                    const Icon(
+                                      Icons.place_outlined,
+                                      color: Colors.green,
+                                    ),
                                     const SizedBox(width: 8),
-                                    const Text('Pickup Location', style: TextStyle(fontWeight: FontWeight.w700, color: textPrimary)),
+                                    const Text(
+                                      'Pickup Location',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: textPrimary,
+                                      ),
+                                    ),
                                     const Spacer(),
-                                    _roundIconButton(Icons.near_me_outlined, () => _showMapsOptions(order['pickup'] ?? '')),
+                                    _roundIconButton(
+                                      Icons.near_me_outlined,
+                                      () => _showMapsOptions(
+                                        order['pickup'] ?? '',
+                                      ),
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 4),
-                                Text(order['pickup'] ?? '-', style: const TextStyle(color: textSecondary)),
+                                Text(
+                                  order['pickup'] ?? '-',
+                                  style: const TextStyle(color: textSecondary),
+                                ),
                               ],
                             ),
                           ),
@@ -353,33 +414,78 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Customer Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary)),
+                                const Text(
+                                  'Customer Details',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: textPrimary,
+                                  ),
+                                ),
                                 const SizedBox(height: 12),
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Text(order['customer'] ?? '-', style: const TextStyle(fontWeight: FontWeight.w700, color: textPrimary)),
+                                          Text(
+                                            order['customer'] ?? '-',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w700,
+                                              color: textPrimary,
+                                            ),
+                                          ),
                                           const SizedBox(height: 4),
-                                          Text(order['customerPhone'] ?? '-', style: const TextStyle(color: textSecondary)),
+                                          Text(
+                                            order['customerPhone'] ?? '-',
+                                            style: const TextStyle(
+                                              color: textSecondary,
+                                            ),
+                                          ),
                                           const SizedBox(height: 12),
-                                          Row(children: [
-                                            const Icon(Icons.place_rounded, color: Colors.red),
-                                            const SizedBox(width: 8),
-                                            const Text('Drop-off Location', style: TextStyle(fontWeight: FontWeight.w700, color: textPrimary)),
-                                            const Spacer(),
-                                            _roundIconButton(Icons.near_me_outlined, () => _showMapsOptions(order['dropoff'] ?? '')),
-                                          ]),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.place_rounded,
+                                                color: Colors.red,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              const Text(
+                                                'Drop-off Location',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  color: textPrimary,
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              _roundIconButton(
+                                                Icons.near_me_outlined,
+                                                () => _showMapsOptions(
+                                                  order['dropoff'] ?? '',
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                           const SizedBox(height: 4),
-                                          Text(order['dropoff'] ?? '-', style: const TextStyle(color: textSecondary)),
+                                          Text(
+                                            order['dropoff'] ?? '-',
+                                            style: const TextStyle(
+                                              color: textSecondary,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    _roundIconButton(Icons.call_outlined, () => _makeCall(order['customerPhone'] ?? '')),
+                                    _roundIconButton(
+                                      Icons.call_outlined,
+                                      () => _makeCall(
+                                        order['customerPhone'] ?? '',
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -391,16 +497,44 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Order Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary)),
+                                  const Text(
+                                    'Order Items',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: textPrimary,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
                                   ...order['items']!
                                       .split(',')
                                       .map((e) => e.trim())
                                       .where((e) => e.isNotEmpty)
-                                      .map((e) => Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 4),
-                                            child: Row(children: [const Text('• ', style: TextStyle(color: textSecondary)), Expanded(child: Text(e, style: const TextStyle(color: textPrimary)))]),
-                                          ))
+                                      .map(
+                                        (e) => Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 4,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Text(
+                                                '• ',
+                                                style: TextStyle(
+                                                  color: textSecondary,
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: Text(
+                                                  e,
+                                                  style: const TextStyle(
+                                                    color: textPrimary,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      )
                                       .toList(),
                                 ],
                               ),
@@ -412,9 +546,19 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Special Instructions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.orange)),
+                                  const Text(
+                                    'Special Instructions',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
                                   const SizedBox(height: 8),
-                                  Text(order['instructions']!, style: const TextStyle(color: textPrimary)),
+                                  Text(
+                                    order['instructions']!,
+                                    style: const TextStyle(color: textPrimary),
+                                  ),
                                 ],
                               ),
                             ),
@@ -424,23 +568,39 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                             width: double.infinity,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: nextStatus.isEmpty ? Colors.grey : emerald,
+                                backgroundColor: nextStatus.isEmpty
+                                    ? Colors.grey
+                                    : emerald,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                               onPressed: nextStatus.isEmpty
                                   ? null
                                   : () async {
-                                      final deliveryId = widget.order['id'] ?? '';
+                                      final deliveryId =
+                                          widget.order['id'] ?? '';
                                       if (deliveryId.isNotEmpty) {
                                         await Supabase.instance.client
                                             .from('deliveries')
                                             .update({'status': nextStatus})
                                             .eq('id', deliveryId);
+                                        setState(() {
+                                          order['status'] = nextStatus;
+                                        });
                                       }
                                     },
-                              child: Text(buttonLabel, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                              child: Text(
+                                buttonLabel,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -467,30 +627,52 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
       child: Column(
         children: [
           Text(
-            order['price']?.startsWith('KSh') == true ? order['price']! : '\$${order['price'] ?? '0.00'}',
-            style: const TextStyle(color: Colors.green, fontSize: 28, fontWeight: FontWeight.w800),
+            order['price']?.startsWith('KSh') == true
+                ? order['price']!
+                : 'Ksh.${order['price'] ?? '0.00'}',
+            style: const TextStyle(
+              color: Colors.green,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 4),
-          const Text('Estimated earnings', style: TextStyle(color: textSecondary)),
+          const Text(
+            'Estimated earnings',
+            style: TextStyle(color: textSecondary),
+          ),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.navigation_outlined, size: 16, color: textSecondary),
+              const Icon(
+                Icons.navigation_outlined,
+                size: 16,
+                color: textSecondary,
+              ),
               const SizedBox(width: 6),
-              Text(order['distance'] ?? '-', style: const TextStyle(color: textSecondary)),
+              Text(
+                order['distance'] ?? '-',
+                style: const TextStyle(color: textSecondary),
+              ),
               const SizedBox(width: 16),
               const Icon(Icons.timer_outlined, size: 16, color: textSecondary),
               const SizedBox(width: 6),
-              Text(order['eta'] ?? '-', style: const TextStyle(color: textSecondary)),
+              Text(
+                order['eta'] ?? '-',
+                style: const TextStyle(color: textSecondary),
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _sectionCard({required Widget child, Color background = Colors.white}) {
+  Widget _sectionCard({
+    required Widget child,
+    Color background = Colors.white,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: background,
@@ -511,7 +693,10 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
   Widget _roundIconButton(IconData icon, VoidCallback onTap) {
     return Material(
       color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: Color(0xFFE6E6E6))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: Color(0xFFE6E6E6)),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
@@ -537,15 +722,31 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             const SizedBox(height: 12),
-            const Text('Open in...', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: textPrimary)),
+            const Text(
+              'Open in...',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: textPrimary,
+              ),
+            ),
             const SizedBox(height: 8),
             _sheetAction(
               icon: Icons.map_outlined,
               label: 'Google Maps',
               onTap: () async {
-                final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$encoded');
+                final uri = Uri.parse(
+                  'https://www.google.com/maps/search/?api=1&query=$encoded',
+                );
                 if (await canLaunchUrl(uri)) {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }
@@ -582,7 +783,11 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     );
   }
 
-  Widget _sheetAction({required IconData icon, required String label, required VoidCallback onTap}) {
+  Widget _sheetAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -594,7 +799,12 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
           children: [
             Icon(icon, color: textSecondary),
             const SizedBox(width: 16),
-            Expanded(child: Text(label, style: const TextStyle(color: textPrimary, fontSize: 16))),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(color: textPrimary, fontSize: 16),
+              ),
+            ),
           ],
         ),
       ),
@@ -615,7 +825,10 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
           ),
         ),
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+        child: const Text(
+          'Cancel',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }

@@ -26,69 +26,66 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
   final List<Map<String, String>> _activeDeliveries = [];
   bool _isLoading = false;
 
-
   final Map<String, Map<String, dynamic>> statusConfig = {
-    'New': {
+    'Assigned': {
+      'button': 'Mark as Pickup in Progress',
+      'next': 'Pickup in Progress',
+      'badge': 'Assigned',
+      'badgeColor': const Color(0xFFFAE1D3), // Soft orange background
+      'buttonColor': const Color(0xFFF57C00), // Deep orange
+    },
+    'Pickup in Progress': {
       'button': 'Mark as Picked Up',
       'next': 'Picked Up',
-      'badge': 'New',
-      'badgeColor': Colors.orange,
-      'buttonColor': Colors.orangeAccent,
+      'badge': 'Pickup in Progress',
+      'badgeColor': const Color(0xFFD0E8FF), // Soft blue background
+      'buttonColor': const Color(0xFF1976D2), // Blue
     },
     'Picked Up': {
       'button': 'Mark as On The Way',
       'next': 'On The Way',
       'badge': 'Picked Up',
-      'badgeColor': Colors.blue,
-      'buttonColor': Colors.orangeAccent,
+      'badgeColor': const Color(0xFFE1D7FA), // Soft purple background
+      'buttonColor': const Color(0xFF7E57C2), // Purple
     },
     'On The Way': {
       'button': 'Mark as Delivered',
       'next': 'Delivered',
       'badge': 'On The Way',
-      'badgeColor': Colors.purple,
-      'buttonColor': Colors.green, // Green for delivered
+      'badgeColor': const Color(0xFFD3FAD6), // Soft green background
+      'buttonColor': const Color(0xFF388E3C), // Green
     },
     'Delivered': {
       'button': 'Delivered',
       'next': '',
       'badge': 'Delivered',
-      'badgeColor': Colors.green,
-      'buttonColor': Colors.grey, // Disabled
-    },
-    'Accepted': {
-      'button': 'Mark as Picked Up',
-      'next': 'Picked Up',
-      'badge': 'Accepted',
-      'badgeColor': emerald,
-      'buttonColor': emerald,
+      'badgeColor': const Color(0xFF388E3C), // Soft grey background
+      'buttonColor': const Color(0xFF388E3C), // Grey
     },
   };
 
   // Helper to get badge color
   Color _getBadgeColor(String status) {
     switch (status) {
-      case 'New':
-        return Colors.orange;
+      case 'Assigned':
+        return const Color(0xFFF57C00); // Deep orange
+      case 'Pickup in Progress':
+        return const Color(0xFF1976D2); // Blue
       case 'Picked Up':
-        return Colors.blue;
+        return const Color(0xFF7E57C2); // Purple
       case 'On The Way':
-        return Colors.purple;
+        return const Color(0xFF388E3C); // Green
       case 'Delivered':
-        return Colors.green;
-      case 'Accepted':
-        return emerald;
+        return const Color(0xFF388E3C); // Grey
       default:
-        return Colors.grey;
+        return const Color(0xFFBDBDBD); // Default grey
     }
   }
 
   void _openOrderPreview(Map<String, String> d) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => OrderPreviewPage(order: d),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => OrderPreviewPage(order: d)));
   }
 
   @override
@@ -126,9 +123,15 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
 
   Future<void> _loadDeliveries() async {
     setState(() => _isLoading = true);
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
     final List<dynamic> rows = await _supabase
         .from('deliveries')
         .select()
+        .eq('rider_id', userId)
         .order('created_at', ascending: false)
         .limit(50);
 
@@ -143,14 +146,14 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
       'id': r['id']?.toString() ?? '',
       'merchant': r['merchant']?.toString() ?? '',
       'customer': r['customer_name']?.toString() ?? '',
-      'pickup': r['pickup_address']?.toString() ?? '',
-      'dropoff': r['dropoff_address']?.toString() ?? '',
+      'pickup': r['pickup']?.toString() ?? '',
+      'dropoff': r['dropoff']?.toString() ?? '',
       'price': (r['price'] ?? r['amount'] ?? '').toString(),
       'status': r['status']?.toString() ?? 'New',
       'pickupPhone': r['pickup_phone']?.toString() ?? '',
       'customerPhone': r['customer_phone']?.toString() ?? '',
-      'pickupQuery': r['pickup_address']?.toString() ?? '',
-      'dropoffQuery': r['dropoff_address']?.toString() ?? '',
+      'pickupQuery': r['pickup']?.toString() ?? '',
+      'dropoffQuery': r['dropoff']?.toString() ?? '',
       'eta': r['eta']?.toString() ?? '',
       'distance': r['distance']?.toString() ?? '',
       'pickupLat': (r['pickup_lat']?.toString() ?? ''),
@@ -172,9 +175,12 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
           callback: (payload) {
             final updated = payload.newRecord;
             setState(() {
-              final index = _activeDeliveries.indexWhere((d) => d['id'] == (updated['id']?.toString() ?? ''));
+              final index = _activeDeliveries.indexWhere(
+                (d) => d['id'] == (updated['id']?.toString() ?? ''),
+              );
               if (index != -1) {
-                _activeDeliveries[index]['status'] = (updated['status'] ?? '').toString();
+                _activeDeliveries[index]['status'] = (updated['status'] ?? '')
+                    .toString();
               }
             });
           },
@@ -185,16 +191,25 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
           table: 'deliveries',
           callback: (payload) {
             final inserted = payload.newRecord;
-            setState(() {
-              _activeDeliveries.insert(0, _mapDbRowToUi(inserted));
-            });
+            final userId = Supabase.instance.client.auth.currentUser?.id;
+            if (inserted['rider_id']?.toString() == userId) {
+              setState(() {
+                _activeDeliveries.insert(0, _mapDbRowToUi(inserted));
+              });
+            }
           },
         )
         .subscribe();
   }
 
-  Future<void> _updateDeliveryStatus(String deliveryId, String newStatus) async {
-    await _supabase.from('deliveries').update({'status': newStatus}).eq('id', deliveryId);
+  Future<void> _updateDeliveryStatus(
+    String deliveryId,
+    String newStatus,
+  ) async {
+    await _supabase
+        .from('deliveries')
+        .update({'status': newStatus})
+        .eq('id', deliveryId);
   }
 
   Widget _buildDashboardBody() {
@@ -674,188 +689,196 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
     return InkWell(
       onTap: () => _openOrderPreview(d),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Status badge at top left
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  badgeText,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Status badge at top left
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
-                ),
-              ),
-              const Spacer(),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                d['merchant'] ?? '',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: textPrimary,
-                ),
-              ),
-              const Spacer(),
-              _iconButton(
-                icon: Icons.near_me_outlined,
-                onTap: () => _showNavigateSheet(d),
-              ),
-              const SizedBox(width: 8),
-              _iconButton(
-                icon: Icons.call_outlined,
-                onTap: () => _showContactSheet(d),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Order for ${d['customer']}',
-            style: const TextStyle(color: textSecondary),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(
-                Icons.location_on_outlined,
-                size: 16,
-                color: Colors.grey,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Pickup: ${d['pickup']}',
-                  style: const TextStyle(color: textPrimary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(Icons.location_on, size: 16, color: Colors.green),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'Drop-off: ${d['dropoff']}',
-                  style: const TextStyle(color: textPrimary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // ETA and Distance row
-          Row(
-            children: [
-              if (d['eta'] != null)
-                Row(
-                  children: [
-                    const Icon(Icons.timer, size: 16, color: Colors.orange),
-                    const SizedBox(width: 4),
-                    Text(
-                      'ETA: ${d['eta']}',
-                      style: const TextStyle(
-                        color: textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              if (d['eta'] != null && d['distance'] != null)
-                const SizedBox(width: 16),
-              if (d['distance'] != null)
-                Row(
-                  children: [
-                    const Icon(Icons.route, size: 16, color: Colors.blue),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Distance: ${d['distance']}',
-                      style: const TextStyle(
-                        color: textSecondary,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(child: SizedBox()),
-              Text(
-                'KSh ${d['price']}',
-                style: TextStyle(
-                  color: emerald,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: buttonColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                elevation: 0,
-              ),
-              onPressed: nextStatus.isEmpty
-                  ? null
-                  : () async {
-                      final deliveryId = d['id']!;
-                      await _updateDeliveryStatus(deliveryId, nextStatus);
-                    },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    buttonLabel,
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    badgeText,
                     style: const TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                      fontSize: 12,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward, size: 20),
-                ],
+                ),
+                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  d['merchant'] ?? '',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: textPrimary,
+                  ),
+                ),
+                const Spacer(),
+                _iconButton(
+                  icon: Icons.near_me_outlined,
+                  onTap: () => _showNavigateSheet(d),
+                ),
+                const SizedBox(width: 8),
+                _iconButton(
+                  icon: Icons.call_outlined,
+                  onTap: () => _showContactSheet(d),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Order for ${d['customer']}',
+              style: const TextStyle(color: textSecondary),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Pickup: ${d['pickup']}',
+                    style: const TextStyle(color: textPrimary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.location_on, size: 16, color: Colors.green),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Drop-off: ${d['dropoff']}',
+                    style: const TextStyle(color: textPrimary),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // ETA and Distance row
+            Row(
+              children: [
+                if (d['eta'] != null)
+                  Row(
+                    children: [
+                      const Icon(Icons.timer, size: 16, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text(
+                        'ETA: ${d['eta']}',
+                        style: const TextStyle(
+                          color: textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (d['eta'] != null && d['distance'] != null)
+                  const SizedBox(width: 16),
+                if (d['distance'] != null)
+                  Row(
+                    children: [
+                      const Icon(Icons.route, size: 16, color: Colors.blue),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Distance: ${d['distance']}',
+                        style: const TextStyle(
+                          color: textSecondary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(child: SizedBox()),
+                Text(
+                  'KSh ${d['price']}',
+                  style: TextStyle(
+                    color: emerald,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: buttonColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: nextStatus.isEmpty
+                    ? null
+                    : () async {
+                        final deliveryId = d['id']!;
+                        await _updateDeliveryStatus(deliveryId, nextStatus);
+                        setState(() {
+                          d['status'] = nextStatus;
+                        });
+                        // Optionally, reload all deliveries:
+                        // await _loadDeliveries();
+                      },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      buttonLabel,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.arrow_forward, size: 20),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
   }
 }

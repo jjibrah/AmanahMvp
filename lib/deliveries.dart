@@ -1,29 +1,5 @@
 import 'package:flutter/material.dart';
-
-class DeliveryStatus {
-  static const String inTransit = 'IN TRANSIT';
-  static const String pending = 'PENDING';
-  static const String delivered = 'DELIVERED';
-  static const String cancelled = 'CANCELLED';
-}
-
-class Delivery {
-  final String id;
-  final String pickupLocation;
-  final String dropoffLocation;
-  final DateTime date;
-  final double amount;
-  final String status;
-
-  Delivery({
-    required this.id,
-    required this.pickupLocation,
-    required this.dropoffLocation,
-    required this.date,
-    required this.amount,
-    required this.status,
-  });
-}
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DeliveriesPage extends StatefulWidget {
   const DeliveriesPage({Key? key}) : super(key: key);
@@ -32,81 +8,81 @@ class DeliveriesPage extends StatefulWidget {
   State<DeliveriesPage> createState() => _DeliveriesPageState();
 }
 
-class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProviderStateMixin {
+class _DeliveriesPageState extends State<DeliveriesPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _selectedIndex = 0;  // Add this to track selected tab
-  
-  // Sample data - replace with actual data from your backend
-  final List<Delivery> _deliveries = [
-    Delivery(
-      id: 'AM2023001',
-      pickupLocation: 'Westlands, Nairobi',
-      dropoffLocation: 'Kilimani, Nairobi',
-      date: DateTime(2025, 5, 26),
-      amount: 450.00,
-      status: DeliveryStatus.inTransit,
-    ),
-    Delivery(
-      id: 'AM2023002',
-      pickupLocation: 'Karen, Nairobi',
-      dropoffLocation: 'Lavington, Nairobi',
-      date: DateTime(2025, 5, 26),
-      amount: 350.00,
-      status: DeliveryStatus.pending,
-    ),
-    Delivery(
-      id: 'AM2023003',
-      pickupLocation: 'CBD, Nairobi',
-      dropoffLocation: 'Parklands, Nairobi',
-      date: DateTime(2025, 5, 25),
-      amount: 650.00,
-      status: DeliveryStatus.delivered,
-    ),
-  ];
+  bool _isLoading = false;
+  final List<Map<String, String>> _deliveries = [];
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() {
-          _selectedIndex = _tabController.index;
-        });
-      }
-    });
+    _loadDeliveries();
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case DeliveryStatus.inTransit:
-        return const Color.fromARGB(255, 51, 187, 120);
-      case DeliveryStatus.pending:
-        return Colors.orange;
-      case DeliveryStatus.delivered:
-        return Colors.green;
-      case DeliveryStatus.cancelled:
-        return Colors.grey;
-      default:
-        return Colors.grey;
+  Future<void> _loadDeliveries() async {
+    setState(() => _isLoading = true);
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
     }
+    final List<dynamic> rows = await _supabase
+        .from('deliveries')
+        .select()
+        .eq('rider_id', userId)
+        .order('created_at', ascending: false)
+        .limit(100);
+    _deliveries
+      ..clear()
+      ..addAll(rows.map<Map<String, String>>((r) => _mapDbRowToUi(r)));
+    setState(() => _isLoading = false);
   }
 
-  List<Delivery> _getFilteredDeliveries(String filter) {
+  Map<String, String> _mapDbRowToUi(Map<String, dynamic> r) {
+    return {
+      'id': r['id']?.toString() ?? '',
+      'pickup': r['pickup']?.toString() ?? '',
+      'dropoff': r['dropoff']?.toString() ?? '',
+      'date': r['created_at']?.toString().substring(0, 10) ?? '',
+      'amount': (r['price'] ?? r['amount'] ?? '').toString(),
+      'status': r['status']?.toString() ?? '',
+    };
+  }
+
+  List<Map<String, String>> _getFilteredDeliveries(String filter) {
     if (filter == 'All') return _deliveries;
-    return _deliveries.where((delivery) => 
-      delivery.status == filter.toUpperCase()).toList();
+    if (filter == 'Active') {
+      return _deliveries
+          .where(
+            (d) => d['status'] != 'Delivered' && d['status'] != 'Cancelled',
+          )
+          .toList();
+    }
+    return _deliveries.where((d) => d['status'] == filter).toList();
   }
 
   static const Color emerald = Color.fromARGB(255, 51, 187, 120);
   static const Color backgroundWhite = Color(0xFFF7F8FA);
   static const Color textPrimary = Color(0xFF222B45);
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Assigned':
+      case 'Pickup in Progress':
+      case 'Picked Up':
+      case 'On The Way':
+        return emerald;
+      case 'Delivered':
+        return Colors.green;
+      case 'Cancelled':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,12 +107,10 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
             child: TabBar(
               controller: _tabController,
               isScrollable: true,
-              padding: EdgeInsets.zero,
               labelPadding: const EdgeInsets.symmetric(horizontal: 4),
               indicatorColor: Colors.transparent,
               labelColor: Colors.white,
               unselectedLabelColor: textPrimary,
-              indicator: null,
               tabs: [
                 _buildTab('All', 0),
                 _buildTab('Active', 1),
@@ -147,27 +121,35 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildDeliveryList('All'),
-          _buildDeliveryList('In Transit'),
-          _buildDeliveryList('Delivered'),
-          _buildDeliveryList('Cancelled'),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildDeliveryList('All'),
+                _buildDeliveryList('Active'),
+                _buildDeliveryList('Delivered'),
+                _buildDeliveryList('Cancelled'),
+              ],
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Implement new delivery creation
-        },
-        backgroundColor: const Color.fromARGB(255, 51, 187, 120),
-        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: _loadDeliveries,
+        backgroundColor: emerald,
+        child: const Icon(Icons.refresh, color: Colors.white),
       ),
     );
   }
 
   Widget _buildDeliveryList(String filter) {
     final filteredDeliveries = _getFilteredDeliveries(filter);
+    if (filteredDeliveries.isEmpty) {
+      return Center(
+        child: Text(
+          'No deliveries found.',
+          style: TextStyle(color: textPrimary.withOpacity(0.5), fontSize: 16),
+        ),
+      );
+    }
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: filteredDeliveries.length,
@@ -190,18 +172,18 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 51, 187, 120).withOpacity(0.1),
+                        color: emerald.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         Icons.local_shipping_outlined,
-                        color: const Color.fromARGB(255, 51, 187, 120),
+                        color: emerald,
                         size: 20,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      '#${delivery.id}',
+                      '#${delivery['id']}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -214,13 +196,15 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(delivery.status).withOpacity(0.1),
+                        color: _getStatusColor(
+                          delivery['status'] ?? '',
+                        ).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
-                        delivery.status,
+                        delivery['status'] ?? '',
                         style: TextStyle(
-                          color: _getStatusColor(delivery.status),
+                          color: _getStatusColor(delivery['status'] ?? ''),
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -237,11 +221,14 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
                       color: Colors.grey,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      delivery.pickupLocation,
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 14,
+                    Expanded(
+                      child: Text(
+                        delivery['pickup'] ?? '',
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -249,17 +236,16 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.location_on,
-                      size: 20,
-                      color: Color.fromARGB(255, 51, 187, 120),
-                    ),
+                    const Icon(Icons.location_on, size: 20, color: emerald),
                     const SizedBox(width: 8),
-                    Text(
-                      delivery.dropoffLocation,
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 14,
+                    Expanded(
+                      child: Text(
+                        delivery['dropoff'] ?? '',
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -277,7 +263,7 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${delivery.date.day}/${delivery.date.month}/${delivery.date.year}',
+                          delivery['date'] ?? '',
                           style: const TextStyle(
                             color: Colors.grey,
                             fontSize: 14,
@@ -286,9 +272,9 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
                       ],
                     ),
                     Text(
-                      'KSh ${delivery.amount.toStringAsFixed(2)}',
+                      'KSh ${delivery['amount'] ?? ''}',
                       style: const TextStyle(
-                        color: Color.fromARGB(255, 51, 187, 120),
+                        color: emerald,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -309,10 +295,12 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: _tabController.index == index ? const Color.fromARGB(255, 51, 187, 120) : Colors.white,
+            color: _tabController.index == index ? emerald : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _tabController.index == index ? const Color.fromARGB(255, 51, 187, 120) : textPrimary.withOpacity(0.2),
+              color: _tabController.index == index
+                  ? emerald
+                  : textPrimary.withOpacity(0.2),
               width: 1,
             ),
           ),
@@ -321,8 +309,12 @@ class _DeliveriesPageState extends State<DeliveriesPage> with SingleTickerProvid
               text,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: _tabController.index == index ? FontWeight.w600 : FontWeight.w500,
-                color: _tabController.index == index ? Colors.white : textPrimary,
+                fontWeight: _tabController.index == index
+                    ? FontWeight.w600
+                    : FontWeight.w500,
+                color: _tabController.index == index
+                    ? Colors.white
+                    : textPrimary,
               ),
             ),
           ),
