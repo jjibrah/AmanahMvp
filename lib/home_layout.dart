@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'profile.dart';
 import 'deliveries.dart';
+import 'home_dashboard.dart';
+// Removed earnings and notifications pages
 
 class HomeLayout extends StatefulWidget {
   const HomeLayout({Key? key}) : super(key: key);
@@ -14,21 +16,25 @@ class _HomeLayoutState extends State<HomeLayout> {
   static const Color emerald = Color.fromARGB(255, 87, 208, 192);
   static const Color textSecondary = Color(0xFF8F9BB3);
 
-  final List<Widget> _pages = [
-    const Placeholder(), // TODO: Replace with actual home page
-    const DeliveriesPage(),
-    const ProfilePage(),
-  ];
+  // Recompute pages each build to avoid stale state after hot reload
+  List<Widget> get _pages => const [
+        HomeDashboardPage(),
+        DeliveriesPage(),
+        ProfilePage(),
+      ];
 
   @override
   Widget build(BuildContext context) {
+    // Clamp index in case list size changed (e.g., tabs removed)
+    final int clampedIndex = _currentIndex.clamp(0, _pages.length - 1);
     return Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
+        index: clampedIndex,
         children: _pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
+        type: BottomNavigationBarType.fixed,
+        currentIndex: clampedIndex,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
